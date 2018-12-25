@@ -1,0 +1,27 @@
+node('Docker') {
+    stage('Checkout'){
+        //Checkout the code from a GitHub repository
+        git url: 'https://github.com/vsuryateja/hello-world-war.git'
+      }
+    stage('build'){
+        sh "mvn clean compile"
+      }
+    stage('deploy-to-nexus'){
+        sh "mvn deploy"
+      }
+    stage('create Container'){
+	try {
+		sh "sudo docker rm hello-world-${version} -f"
+	} catch (Exception e) {
+      		sh "echo no container running"
+  	}
+	sh '''
+		sudo docker login --username vsuryateja --password ${DockerRepoPasswd}
+		sudo docker build -t hello-world --build-arg nexusip=${nexusip} .
+		sudo docker run -id --name hello-world-${version} -p 8080:8080 hello-world
+		sudo docker tag hello-world vsuryateja/hello-world:${version}
+		sudo docker push vsuryateja/hello-world:${version}
+		'''
+      }
+}
+
